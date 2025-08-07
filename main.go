@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nfnt/resize"
 	"github.com/sergeymakinen/go-ico"
 )
 
@@ -60,8 +61,18 @@ func main() {
 	}
 	defer outFile.Close()
 
-	// アイコンに変換して保存
-	err = ico.Encode(outFile, img)
+	// アイコンに変換して保存（複数サイズ対応）
+	// Windowsエクスプローラーで適切に表示されるよう、複数のサイズを含める
+	sizes := []uint{16, 32, 48, 64, 128, 256}
+	
+	var images []image.Image
+	for _, size := range sizes {
+		// 画像をリサイズ
+		resized := resize.Resize(size, size, img, resize.Lanczos3)
+		images = append(images, resized)
+	}
+	
+	err = ico.EncodeAll(outFile, images)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "エラー: アイコン形式にエンコードできません: %v\n", err)
 		os.Exit(1)
