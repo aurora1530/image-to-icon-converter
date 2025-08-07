@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"image/draw"
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
@@ -12,6 +13,40 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/sergeymakinen/go-ico"
 )
+
+// 比率を保持しながら正方形のキャンバスに画像を配置する関数
+func resizeWithAspectRatio(img image.Image, size uint) image.Image {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// 元画像の比率を計算
+	var newWidth, newHeight uint
+	if width > height {
+		// 横長の場合
+		newWidth = size
+		newHeight = uint(float64(height) * float64(size) / float64(width))
+	} else {
+		// 縦長または正方形の場合
+		newHeight = size
+		newWidth = uint(float64(width) * float64(size) / float64(height))
+	}
+
+	// 比率を保持してリサイズ
+	resized := resize.Resize(newWidth, newHeight, img, resize.Lanczos3)
+
+	// 正方形のキャンバスを作成（透明な背景）
+	canvas := image.NewRGBA(image.Rect(0, 0, int(size), int(size)))
+
+	// キャンバスの中央に配置するための座標を計算
+	x := (int(size) - int(newWidth)) / 2
+	y := (int(size) - int(newHeight)) / 2
+
+	// リサイズした画像をキャンバスの中央に描画
+	draw.Draw(canvas, image.Rect(x, y, x+int(newWidth), y+int(newHeight)), resized, image.Point{}, draw.Src)
+
+	return canvas
+}
 
 func main() {
 	// コマンドライン引数の定義
@@ -67,8 +102,8 @@ func main() {
 
 	var images []image.Image
 	for _, size := range sizes {
-		// 画像をリサイズ
-		resized := resize.Resize(size, size, img, resize.Lanczos3)
+		// 比率を保持しながら画像をリサイズ
+		resized := resizeWithAspectRatio(img, size)
 		images = append(images, resized)
 	}
 
